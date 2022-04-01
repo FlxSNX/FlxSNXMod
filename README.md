@@ -1,2 +1,3 @@
 # FlxSNXMod
-基于 MelonLoader 的 CoreKeeper(地心护核者) 的作弊Mod
+基于 MelonLoader 的 CoreKeeper(地心护核者) 的作弊Mod  
+有时间整理下 再传上来
