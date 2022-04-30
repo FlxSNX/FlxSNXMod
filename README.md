@@ -29,7 +29,7 @@
 1. 安装 [MelonLoader](https://github.com/LavaGang/MelonLoader) 到 `地心护核者` 的安装目录
 2. 从 Steam 启动游戏
 3. 使用 Visual Studio 打开项目
-4. 从游戏目录下的 `MelonLoader\Managed` 里引入对应程序集
+4. 从游戏目录下的 `MelonLoader\Managed` 里引入对应的程序集
 5. 生成 FlxSNXMod
 
 ## 如何使用Mod
