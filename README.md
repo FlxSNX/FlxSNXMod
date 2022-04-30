@@ -1,7 +1,7 @@
 # FlxSNXMod
 基于 MelonLoader 的 CoreKeeper(地心护核者) 的作弊Mod  
 
-![预览图](https://files.catbox.moe/wu5y4j.png)
+![预览图](https://files.catbox.moe/keacvj.png)
 
 ## 功能
 * 添加物品
@@ -12,6 +12,10 @@
 * 雷霆光束
 * 背包物品一键清空
 * 背包物品一键999
+* 范围挖墙&铲地
+* 范围虫炮
+* 不会饥饿
+* 不耗耐久
 
 ## 说明
 1. 这是我第一次尝试 C# 和 制作Mod
