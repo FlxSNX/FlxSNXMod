@@ -7,40 +7,53 @@ using Il2CppSystem.Text.RegularExpressions;
 using MelonLoader;
 using UnityEngine;
 using HarmonyLib;
+using Steamworks;
 
 namespace FlxsnxMod
 {
     [HarmonyPatch(typeof(MapUI), "Ping")]
-    public class Flx: MelonMod
+    public class Flx : MelonMod
     {
-        private bool showMenu = false;
-        public Manager m;
-        public ChatWindow chat;
-        public PlayerInput pinput;
-        public string itemID = "1";
-        public float amount = 1;
-        public const string version = "1.1.0";
+        static bool showMenu = false;
+        Manager m;
+        ChatWindow chat;
+        string itemID = "1";
+        float amount = 1;
+        public const string version = "1.2.1";
         Vector2 vSbarValue;
-        public bool ThunderBeam = false;
-        public AssetBundle Flxasset;
-        public GUIStyle windowStyle;
-        public GUIStyle buttonStyle;
-        public GUIStyle vSbarStyle;
-        public Color32 ModColor = new Color32(165, 151, 115, 255);
-        public Rect WindowRect = new Rect(0, (Screen.height - 420) / 2 + 30, 320, 420);
-        public GUIStyle ModIcon;
-        public static bool MapPing = false;
+        bool ThunderBeam = false;
+        AssetBundle Flxasset;
+        GUIStyle buttonStyle;
+        Color32 ModColor = new Color32(165, 151, 115, 255);
+        Rect WindowRect = new Rect(0, (Screen.height - 420) / 2 + 30, 330, 420);
+        GUIStyle ModIcon;
+        GUIStyle CloseButton;
+        GUIStyle OpenButton;
+        static bool MapPing = false;
+        static bool rangeClear = false;
+        static float clearRange = 5.0f;
+        static bool oneTapClearTile = false;
+        static bool pullLootToPlayer = false;
+
+        bool showAddItem = false;
+        bool showSkill = false;
+        bool showOther = false;
+        bool showOther2 = false;
+        bool showNewRangeClear = false;
+
+        static ulong steamId = 0;
+
         public override void OnApplicationStart()
         {
             Flxasset = AssetBundle.LoadFromMemory(FlxsnxMod.Properties.Res.mod);
             buttonStyle = new GUIStyle()
             {
-                normal = new GUIStyleState  // 正常样式
+                normal = new GUIStyleState
                 {
                     textColor = Color.white,
                     background = Flxasset.LoadAsset<Texture2D>("button")
                 },
-                active = new GUIStyleState  // 点击样式
+                active = new GUIStyleState
                 {
                     textColor = Color.white,
                     background = Flxasset.LoadAsset<Texture2D>("button3")
@@ -55,19 +68,68 @@ namespace FlxsnxMod
                 padding = new RectOffset(4, 4, 4, 4),
                 margin = new RectOffset(5, 5, 0, 5)
             };
+
             ModIcon = new GUIStyle()
             {
-                normal = new GUIStyleState  // 正常样式
+                normal = new GUIStyleState
                 {
                     textColor = Color.white,
                     background = Flxasset.LoadAsset<Texture2D>("avatar")
                 },
                 fixedHeight = 28,
                 fixedWidth = 28,
-                margin = new RectOffset(0,0,6,6)
+                margin = new RectOffset(0, 0, 10, 10)
+            };
+
+            CloseButton = new GUIStyle()
+            {
+                normal = new GUIStyleState
+                {
+                    textColor = Color.white,
+                    background = Flxasset.LoadAsset<Texture2D>("button")
+                },
+                active = new GUIStyleState
+                {
+                    textColor = Color.white,
+                    background = Flxasset.LoadAsset<Texture2D>("button3")
+                },
+                hover = new GUIStyleState
+                {
+                    textColor = Color.white,
+                    background = Flxasset.LoadAsset<Texture2D>("button2")
+                },
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = true,
+                margin = new RectOffset(0, 0, 10, 10),
+                fontSize = 11
+            };
+
+            OpenButton = new GUIStyle()
+            {
+                normal = new GUIStyleState
+                {
+                    textColor = Color.white,
+                    background = Flxasset.LoadAsset<Texture2D>("button")
+                },
+                active = new GUIStyleState
+                {
+                    textColor = Color.white,
+                    background = Flxasset.LoadAsset<Texture2D>("button3")
+                },
+                hover = new GUIStyleState
+                {
+                    textColor = Color.white,
+                    background = Flxasset.LoadAsset<Texture2D>("button2")
+                },
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = true,
+                margin = new RectOffset(0, 6, 6, 0),
+                fontSize = 11,
             };
         }
+
         public override void OnUpdate()
+
         {
             if (m == null)
             {
@@ -83,8 +145,8 @@ namespace FlxsnxMod
             {
                 if (ThunderBeam)
                 {
-                    
-                    if (m.player.playerIndex == 1)
+
+                    if (isAdminPlayer())
                     {
                         m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), m.player.aimDirection, m.player.entity);
                     }
@@ -92,17 +154,11 @@ namespace FlxsnxMod
                 }
             }
 
-            if (showMenu)
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
-
             if (Input.GetKeyDown(KeyCode.V))
             {
                 if (ThunderBeam)
                 {
-                    if (m.player.playerIndex == 1)
+                    if (isAdminPlayer())
                     {
                         superThunderBeam();
                     }
@@ -126,9 +182,9 @@ namespace FlxsnxMod
 
                     if (code.Length >= 2 && code[1] != null && code[1] != "")
                     {
-                        if(code[0] == "/item" && IsNumeric(code[2]))
+                        if (code[0] == "/item" && IsNumeric(code[2]))
                         {
-                            if (m.player.playerIndex == 1)
+                            if (isAdminPlayer())
                             {
                                 if ((code.Length == 4 && code[3] != null && code[3] != "" && IsNumeric(code[3])))
                                 {
@@ -141,16 +197,17 @@ namespace FlxsnxMod
                             }
                             else
                             {
-                                m._textManager.SpawnCoolText("非房主无法使用", new Vector3(0, 2, 0), Color.red, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
+                                m._textManager.SpawnCoolText("非AdminPlayer无法使用", new Vector3(0, 2, 0), Color.red, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
                             }
                         }
 
-                        if(code[0] == "/buff" && code.Length >= 3 && code[2] != null && code[2] != "")
+                        if (code[0] == "/buff" && code.Length >= 3 && code[2] != null && code[2] != "")
                         {
-                            if(code[1] == "add" && code.Length == 4 && code[3] != null && code[3] != "" && IsNumeric(code[3]))
+                            if (code[1] == "add" && code.Length == 4 && code[3] != null && code[3] != "" && IsNumeric(code[3]))
                             {
                                 addBuff(code[2], (int)Int32.Parse(code[3]));
-                            }else if(code[1] == "del")
+                            }
+                            else if (code[1] == "del")
                             {
                                 delBuff(code[2], 0);
                             }
@@ -158,16 +215,25 @@ namespace FlxsnxMod
                     }
                 }
             }
+
+            if (Input.GetKeyDown(KeyCode.F11) || Input.GetKeyDown(KeyCode.BackQuote))
+            {
+                showMenu = !showMenu;
+                if (showMenu == true)
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                }
+            }
         }
 
         public override void OnGUI()
         {
-            GUILayout.BeginArea(new Rect(5, 5, 120, 30));
             var oldbackground = GUI.backgroundColor;
             GUI.backgroundColor = new Color32(48, 48, 48, 255);
             GUI.skin.window = new GUIStyle()
             {
-                normal = new GUIStyleState  // 正常样式
+                normal = new GUIStyleState
                 {
                     textColor = Color.white,
                     background = Flxasset.LoadAsset<Texture2D>("window"),
@@ -175,7 +241,6 @@ namespace FlxsnxMod
                 padding = new RectOffset(25, 25, 25, 25),
                 wordWrap = true
             };
-
             GUI.skin.verticalScrollbarThumb = new GUIStyle()
             {
                 normal = new GUIStyleState
@@ -184,7 +249,6 @@ namespace FlxsnxMod
                 },
                 fixedWidth = 6
             };
-
             GUI.skin.horizontalSliderThumb = new GUIStyle()
             {
                 normal = new GUIStyleState
@@ -194,7 +258,6 @@ namespace FlxsnxMod
                 fixedWidth = 10,
                 fixedHeight = 10
             };
-
             GUI.skin.verticalScrollbar = new GUIStyle()
             {
                 normal = new GUIStyleState
@@ -204,101 +267,186 @@ namespace FlxsnxMod
                 fixedWidth = 6
             };
 
-            bool flag = GUILayout.Button("FlxSNXMod", buttonStyle, new GUILayoutOption[]
-            {
-                GUILayout.Height(30)
-            });
+            GUILayout.BeginArea(new Rect(5, 5, 120, 30));
 
-            if (flag)
+
+
+            if (showMenu == false)
             {
-                showMenu = !showMenu;
+                if (GUILayout.Button("FlxSNXMod", buttonStyle, new GUILayoutOption[] { GUILayout.Height(30) }))
+                {
+                    showMenu = true;
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                }
             }
-            
+
             GUILayout.EndArea();
             if (showMenu)
             {
                 GUI.backgroundColor = oldbackground;
-                WindowRect = GUI.Window(20029933, WindowRect, (GUI.WindowFunction)menuWindow,"");
-                /*if (showSkillWindow)
-                {
-                    GUI.Window(20029934, new Rect(330, (Screen.height - 420) / 2 + 50, 200, 120), (GUI.WindowFunction)SkillWindow, "", windowStyle);
-                }*/
+                WindowRect = GUI.Window(20029933, WindowRect, (GUI.WindowFunction)menuWindow, "");
             }
         }
-        public void menuWindow(int winId)
+
+        void menuWindow(int winId)
         {
             if (m == null)
             {
                 m = GameObject.FindObjectOfType<Manager>();
             }
+
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+
             GUILayout.Button("", ModIcon, new GUILayoutOption[0]);
-            GUILayout.Label("FlxSNXMod Version " + version, new GUIStyle()
+            GUILayout.Label("FlxsnxMod V" + version, new GUIStyle()
             {
                 normal = new GUIStyleState
                 {
                     textColor = Color.white,
 
                 },
-                margin = new RectOffset(6, 0, 6, 6),
-                padding = new RectOffset(0, 0, 8, 0),
+                margin = new RectOffset(6, 0, 6, 10),
+                padding = new RectOffset(0, 0, 10, 0),
                 fixedHeight = 28
             }, new GUILayoutOption[0]); ;
+            GUI.backgroundColor = new Color32(245, 45, 45, 255);
+            if (GUILayout.Button("X", CloseButton, new GUILayoutOption[] { GUILayout.Width(25), GUILayout.Height(25) }))
+            {
+                showMenu = false;
+            }
+
             GUILayout.EndHorizontal();
+
+            GUI.backgroundColor = new Color32(58, 58, 58, 255);
             vSbarValue = GUILayout.BeginScrollView(vSbarValue, false, true, new GUILayoutOption[0]);
             GUI.backgroundColor = ModColor;
-            GUILayout.Label("添加物品", new GUILayoutOption[0]);
-            amount = GUILayout.HorizontalSlider(amount, 1, 999, new GUILayoutOption[0]);
-            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            var IDText = "1";
-            if (itemID == "" || itemID == null)
-            {
-                itemID = "1";
-            }
-            else
-            {
-                IDText = Regex.Replace(itemID, @"[^0-9]", "");
-                if (IDText == "") IDText = "1";
-            }
 
-            // LoggerInstance.Msg("IDText" + IDText);
-            GUILayout.Label("物品ID:" + Int32.Parse(IDText), new GUILayoutOption[0]);
-            GUILayout.Label("数量:" + (int)amount, new GUILayoutOption[0]);
+            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+            bool link = GUILayout.Button("作者B站主页", buttonStyle, new GUILayoutOption[0]);
+            if (link)
+            {
+                m._platformManager.OpenLink("https://space.bilibili.com/36224682");
+            }
+            bool idtable = GUILayout.Button("物品ID表格", buttonStyle, new GUILayoutOption[0]);
+            if (idtable)
+            {
+                m._platformManager.OpenLink("https://docs.qq.com/sheet/DRUdjeW53QUN5T3B1");
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label("由于有人使用Mod恶意炸房,部分功能仅限AdminPlayer使用", new GUILayoutOption[0]);
+
+            GUILayout.Label("游戏加速:" + (int)UnityEngine.Time.timeScale + "X", new GUILayoutOption[0]);
+            UnityEngine.Time.timeScale = GUILayout.HorizontalSlider((int)UnityEngine.Time.timeScale, 1, 50, new GUILayoutOption[0]);
+
+            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+            if (GUILayout.Button("一键清空背包", buttonStyle, new GUILayoutOption[0]))
+            {
+                var ih = m.player.playerInventoryHandler;
+                for (int i = 10; i < 45; i++)
+                {
+                    var info = ih.GetObjectData(i);
+                    ih.DestroyObject(i, info.objectID);
+                }
+            }
+            if (GUILayout.Button("背包物品999", buttonStyle, new GUILayoutOption[0]))
+            {
+                var ih = m.player.playerInventoryHandler;
+                for (int i = 10; i < 45; i++)
+                {
+                    var info = ih.GetObjectData(i);
+                    if (info.objectID != ObjectID.None)
+                    {
+                        ih.SetAmount(i, info.objectID, 999);
+                    }
+                }
+            }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            var setid = GUILayout.Button("粘贴ID", buttonStyle, new GUILayoutOption[0]);
-            if (setid)
+            if (GUILayout.Button("不会饥饿", buttonStyle, new GUILayoutOption[0]))
             {
-                if (UnityEngine.GUIUtility.systemCopyBuffer != null || UnityEngine.GUIUtility.systemCopyBuffer != "")
-                {
-                    LoggerInstance.Msg("剪切板内容:" + UnityEngine.GUIUtility.systemCopyBuffer);
-                    itemID = UnityEngine.GUIUtility.systemCopyBuffer;
-                }
-
+                m.player.playerCommandSystem.ToggleCanConsumeHunger(m.player.entity, false);
             }
-            bool add = GUILayout.Button("添加", buttonStyle, new GUILayoutOption[0]);
-            bool add2 = GUILayout.Button("召唤生物", buttonStyle, new GUILayoutOption[0]);
+            if (GUILayout.Button("不耗耐久", buttonStyle, new GUILayoutOption[0]))
+            {
+                addBuff("ToolDurabilityLastsLonger", 100);
+                addBuff("EquipmentDurabilityLastsLonger", 100);
+            }
             GUILayout.EndHorizontal();
-            GUILayout.Label("武器装备等不可叠加的物品 数量尽量为1 否则会卡顿闪退", new GUILayoutOption[0]);
-            if (add)
+
+            /* 添加物品功能区 */
+            GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0, 0, 0, 8) }, new GUILayoutOption[0]);
+            GUILayout.Label("添加物品 [该功能仅限AdminPlayer使用]", new GUILayoutOption[0]);
+            if (GUILayout.Button(showAddItem ? "x" : "+", OpenButton, new GUILayoutOption[] { GUILayout.Width(20), GUILayout.Height(20) }))
             {
-                if (m.player.playerIndex == 1)
-                {
-                    m.player.playerCommandSystem.CreateAndDropEntity((ObjectID)Enum.Parse(typeof(ObjectID), itemID), m.player.RenderPosition + new Vector3(0, 2f, 0), (int)amount);
-                }
+                showAddItem = !showAddItem;
             }
-            if (add2)
+            GUILayout.EndHorizontal();
+            if (showAddItem)
             {
-                if (m.player.playerIndex == 1)
-                {
-                    m.player.playerCommandSystem.CreateEntity((ObjectID)Enum.Parse(typeof(ObjectID), itemID), m.player.RenderPosition + new Vector3(0, 2f, 0));
-                }
+                addItem();
             }
-            GUILayout.Label("技能修改", new GUILayoutOption[0]);
-            /*if (GUI.Button(new Rect(70, 2, 80, 20), "详细修改", buttonStyle))
+
+            /* 修改技能功能区 */
+            GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0, 0, 0, 8) }, new GUILayoutOption[0]);
+            GUILayout.Label("修改技能", new GUILayoutOption[0]);
+            if (GUILayout.Button(showSkill ? "x" : "+", OpenButton, new GUILayoutOption[] { GUILayout.Width(20), GUILayout.Height(20) }))
             {
-                showSkillWindow = !showSkillWindow;
-            }*/
+                showSkill = !showSkill;
+            }
+            GUILayout.EndHorizontal();
+            if (showSkill)
+            {
+                skill();
+            }
+
+            /* 新范围拆除功能区 */
+            GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0, 0, 0, 8) }, new GUILayoutOption[0]);
+            GUILayout.Label("范围拆墙+铲地" + (rangeClear ? "[已开启]" : "[已关闭]"), new GUILayoutOption[0]);
+            if (GUILayout.Button(showNewRangeClear ? "x" : "+", OpenButton, new GUILayoutOption[] { GUILayout.Width(20), GUILayout.Height(20) }))
+            {
+                showNewRangeClear = !showNewRangeClear;
+            }
+            GUILayout.EndHorizontal();
+            if (showNewRangeClear)
+            {
+                rangebox();
+            }
+
+            /* 高级功能区 */
+            GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0, 0, 0, 8) }, new GUILayoutOption[0]);
+            GUILayout.Label("高级功能", new GUILayoutOption[0]);
+            if (GUILayout.Button(showOther2 ? "x" : "+", OpenButton, new GUILayoutOption[] { GUILayout.Width(20), GUILayout.Height(20) }))
+            {
+                showOther2 = !showOther2;
+            }
+            GUILayout.EndHorizontal();
+            if (showOther2)
+            {
+                other();
+            }
+
+            /* 其他功能区 */
+            GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0, 0, 0, 8) }, new GUILayoutOption[0]);
+            GUILayout.Label("其他功能", new GUILayoutOption[0]);
+            if (GUILayout.Button(showOther ? "x" : "+", OpenButton, new GUILayoutOption[] { GUILayout.Width(20), GUILayout.Height(20) }))
+            {
+                showOther = !showOther;
+            }
+            GUILayout.EndHorizontal();
+            if (showOther)
+            {
+                buff();
+            }
+
+            GUILayout.EndScrollView();
+            GUI.DragWindow();
+        }
+
+        // 技能修改类
+        void skill()
+        {
+            GUILayout.BeginVertical(new GUIStyle() { margin = new RectOffset(8, 8, 0, 0) }, new GUILayoutOption[0]);
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
             if (GUILayout.Button("30", buttonStyle, new GUILayoutOption[0]))
             {
@@ -394,59 +542,13 @@ namespace FlxsnxMod
                 addSkill(SkillID.Cooking, 1);
             }
             GUILayout.EndHorizontal();
-            GUILayout.Label("雷霆光束", new GUILayoutOption[0]);
-            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            if (GUILayout.Button("开启", buttonStyle, new GUILayoutOption[0]))
-            {
-                if (ThunderBeam == false)
-                {
-                    ThunderBeam = true;
-                    m._textManager.SpawnCoolText("已获得天空泰坦真传", new Vector3(0, 2, 0), Color.white, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
-                }
-            }
-            if (GUILayout.Button("关闭", buttonStyle, new GUILayoutOption[0]))
-            {
-                if (ThunderBeam == true)
-                {
-                    ThunderBeam = false;
-                    m._textManager.SpawnCoolText("已失去雷霆光束", new Vector3(0, 2, 0), Color.red, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
-                }
-            }
-            GUILayout.EndHorizontal(); 
-            GUILayout.Label("F键普通光束 V键超级光束", new GUILayoutOption[0]);
-            GUILayout.Label("地图传送 (鼠标中键点地图)", new GUILayoutOption[0]);
-            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            if (GUILayout.Button("开启", buttonStyle, new GUILayoutOption[0]))
-            {
-                if (MapPing == false)
-                {
-                    MapPing = true;
-                    m._textManager.SpawnCoolText("地图传送已开启", new Vector3(0, 2, 0), Color.white, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
-                }
-            }
-            if (GUILayout.Button("关闭", buttonStyle, new GUILayoutOption[0]))
-            {
-                if (MapPing == true)
-                {
-                    MapPing = false;
-                    m._textManager.SpawnCoolText("地图传送已关闭", new Vector3(0, 2, 0), Color.red, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
-                }
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label("由于部分人使用Mod恶意炸房,非房主时部分功能将会被限制", new GUILayoutOption[0]);
-            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            bool link = GUILayout.Button("作者B站主页", buttonStyle, new GUILayoutOption[0]);
-            if (link)
-            {
-                m._platformManager.OpenLink("https://space.bilibili.com/36224682");
-            }
-            bool idtable = GUILayout.Button("物品ID表", buttonStyle, new GUILayoutOption[0]);
-            if (idtable)
-            {
-                m._platformManager.OpenLink("https://docs.qq.com/sheet/DRUdjeW53QUN5T3B1");
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label("其他功能", new GUILayoutOption[0]);
+            GUILayout.EndVertical();
+        }
+
+        // buff类功能
+        void buff()
+        {
+            GUILayout.BeginVertical(new GUIStyle() { margin = new RectOffset(8, 8, 0, 0) }, new GUILayoutOption[0]);
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
             GUILayout.Label("无敌", new GUILayoutOption[0]);
             var btn3 = GUILayout.Button("开", buttonStyle, new GUILayoutOption[0]);
@@ -606,89 +708,164 @@ namespace FlxsnxMod
                 delBuff("AuraApplyBurning", 0);
             }
             GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            if (GUILayout.Button("一键清空背包", buttonStyle, new GUILayoutOption[0]))
-            {
-                var ih = m.player.playerInventoryHandler;
-                for (int i = 10; i < 45; i++)
-                {
-                    var info = ih.GetObjectData(i);
-                    ih.DestroyObject(i, info.objectID);
-                }
-            }
-            if (GUILayout.Button("背包物品999", buttonStyle, new GUILayoutOption[0]))
-            {
-                var ih = m.player.playerInventoryHandler;
-                for (int i = 10; i < 45; i++)
-                {
-                    var info = ih.GetObjectData(i);
-                    if (info.objectID != ObjectID.None)
-                    {
-                        ih.SetAmount(i, info.objectID, 999);
-                    }
-                }
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.EndScrollView();
-            GUI.DragWindow();
+            GUILayout.EndVertical();
         }
 
-       /* public void SkillWindow(int winId)
+        void addItem()
         {
-            if (m == null)
-            {
-                m = GameObject.FindObjectOfType<Manager>();
-            }
-            GUILayout.Label("技能修改", new GUILayoutOption[0]);
-            GUI.backgroundColor = ModColor;
+            GUILayout.BeginVertical(new GUIStyle() { margin = new RectOffset(8, 8, 0, 0) }, new GUILayoutOption[0]);
+            amount = GUILayout.HorizontalSlider(amount, 1, 999, new GUILayoutOption[0]);
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            if (GUILayout.Button("挖掘+", buttonStyle, new GUILayoutOption[0]))
+            var IDText = "1";
+            if (itemID == "" || itemID == null)
             {
-                addSkill(SkillID.Mining,1);
+                itemID = "1";
             }
-            if (GUILayout.Button("奔跑+", buttonStyle, new GUILayoutOption[0]))
+            else
             {
-                addSkill(SkillID.Running,1);
+                IDText = Regex.Replace(itemID, @"[^0-9]", "");
+                if (IDText == "") IDText = "1";
             }
-            if (GUILayout.Button("近战+", buttonStyle, new GUILayoutOption[0]))
-            {
-                addSkill(SkillID.Melee,1);
-            }
+
+            GUILayout.Label("物品ID:" + Int32.Parse(IDText), new GUILayoutOption[0]);
+            GUILayout.Label("数量:" + (int)amount, new GUILayoutOption[0]);
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            if (GUILayout.Button("活力+", buttonStyle, new GUILayoutOption[0]))
+            var setid = GUILayout.Button("粘贴ID", buttonStyle, new GUILayoutOption[0]);
+            if (setid)
             {
-                addSkill(SkillID.Vitality,1);
+                if (UnityEngine.GUIUtility.systemCopyBuffer != null && UnityEngine.GUIUtility.systemCopyBuffer != "" && IsNumeric(UnityEngine.GUIUtility.systemCopyBuffer))
+                {
+                    LoggerInstance.Msg("剪切板内容:" + UnityEngine.GUIUtility.systemCopyBuffer);
+                    itemID = UnityEngine.GUIUtility.systemCopyBuffer;
+                }
+
             }
-            if (GUILayout.Button("制作+", buttonStyle, new GUILayoutOption[0]))
-            {
-                addSkill(SkillID.Crafting,1);
-            }
-            if (GUILayout.Button("远程+", buttonStyle, new GUILayoutOption[0]))
-            {
-                addSkill(SkillID.Range,1);
-            }
+            bool add = GUILayout.Button("添加", buttonStyle, new GUILayoutOption[0]);
+            bool add2 = GUILayout.Button("召唤生物", buttonStyle, new GUILayoutOption[0]);
             GUILayout.EndHorizontal();
+            GUILayout.Label("武器装备等不可叠加的物品 数量尽量为1 否则会卡顿闪退", new GUILayoutOption[0]);
+            if (add)
+            {
+                if (isAdminPlayer())
+                {
+                    m.player.playerCommandSystem.CreateAndDropEntity((ObjectID)Enum.Parse(typeof(ObjectID), itemID), m.player.RenderPosition + new Vector3(0, 0, 0), (int)amount);
+                }
+            }
+            if (add2)
+            {
+                if (isAdminPlayer())
+                {
+                    m.player.playerCommandSystem.CreateEntity((ObjectID)Enum.Parse(typeof(ObjectID), itemID), m.player.RenderPosition + new Vector3(2f, 0, 0));
+                }
+            }
+            GUILayout.EndVertical();
+        }
+
+        void other()
+        {
+            GUILayout.BeginVertical(new GUIStyle() { margin = new RectOffset(8, 8, 0, 0) }, new GUILayoutOption[0]);
+            GUILayout.Label("雷霆光束 [该功能仅限AdminPlayer使用]", new GUILayoutOption[0]);
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            if (GUILayout.Button("园艺+", buttonStyle, new GUILayoutOption[0]))
+            if (GUILayout.Button("开启", buttonStyle, new GUILayoutOption[0]))
             {
-                addSkill(SkillID.Gardening,1);
+                if (ThunderBeam == false)
+                {
+                    ThunderBeam = true;
+                    m._textManager.SpawnCoolText("已获得天空泰坦真传", new Vector3(0, 2, 0), Color.white, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
+                }
             }
-            if (GUILayout.Button("钓鱼+", buttonStyle, new GUILayoutOption[0]))
+            if (GUILayout.Button("关闭", buttonStyle, new GUILayoutOption[0]))
             {
-                addSkill(SkillID.Fishing,1);
-            }
-            if (GUILayout.Button("烹饪+", buttonStyle, new GUILayoutOption[0]))
-            {
-                addSkill(SkillID.Cooking,1);
+                if (ThunderBeam == true)
+                {
+                    ThunderBeam = false;
+                    m._textManager.SpawnCoolText("已失去雷霆光束", new Vector3(0, 2, 0), Color.red, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
+                }
             }
             GUILayout.EndHorizontal();
-        }*/
+            GUILayout.Label("F键普通光束 V键超级光束", new GUILayoutOption[0]);
+
+            GUILayout.Label("地图传送 (鼠标中键点地图)", new GUILayoutOption[0]);
+            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+            if (GUILayout.Button("开启", buttonStyle, new GUILayoutOption[0]))
+            {
+                if (MapPing == false)
+                {
+                    MapPing = true;
+                    m._textManager.SpawnCoolText("地图传送已开启", new Vector3(0, 2, 0), Color.white, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
+                }
+            }
+            if (GUILayout.Button("关闭", buttonStyle, new GUILayoutOption[0]))
+            {
+                if (MapPing == true)
+                {
+                    MapPing = false;
+                    m._textManager.SpawnCoolText("地图传送已关闭", new Vector3(0, 2, 0), Color.red, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
+                }
+            }
+            GUILayout.EndHorizontal();
+            
+            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+            GUILayout.Label("秒挖地皮" + (oneTapClearTile ? "[已开启]" : "[已关闭]"), new GUILayoutOption[0]);
+            if (GUILayout.Button(oneTapClearTile ? "关闭" : "开启", buttonStyle, new GUILayoutOption[0]))
+            {
+                oneTapClearTile = !oneTapClearTile;
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label("大范围虫炮 开启后需要重新进存档", new GUILayoutOption[0]);
+            GUILayout.Label("与“范围拆墙+铲地”同时开启会造成卡顿", new GUILayoutOption[0]);
+
+            if (GUILayout.Button("大范围虫炮", buttonStyle, new GUILayoutOption[0]))
+            {
+                ProjectileCDAuthoring[] objs = Resources.FindObjectsOfTypeAll<ProjectileCDAuthoring>();
+
+                foreach (ProjectileCDAuthoring obj in objs)
+                {
+                    if (obj.name == "GrubzookaProjectileEntity")
+                    {
+                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Mold);
+                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Nature);
+                        obj.piercesWallTypes.Add(PugTilemap.Tileset.LarvaHive);
+                        obj.piercesWallTypes.Add(PugTilemap.Tileset.LavaWall);
+                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Stone);
+                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Clay);
+                        obj.tileDamageRadius = 150;
+                        break;
+                    }
+                }
+                rangeClear = false;
+            }
+
+            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+            GUILayout.Label("吸附掉落物" + (pullLootToPlayer ? "[已开启]" : "[已关闭]"), new GUILayoutOption[0]);
+            if (GUILayout.Button(pullLootToPlayer ? "关闭" : "开启", buttonStyle, new GUILayoutOption[0]))
+            {
+                pullLootToPlayer = !pullLootToPlayer;
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label("与“大范围虫炮”同时开启开炮时会小卡一下", new GUILayoutOption[0]);
+
+            GUILayout.EndVertical();
+        }
+
+        void rangebox()
+        {
+            GUILayout.BeginVertical(new GUIStyle() { margin = new RectOffset(8, 8, 0, 0) }, new GUILayoutOption[0]);
+            GUILayout.Label("范围:" + clearRange + " [该功能仅限AdminPlayer使用]", new GUILayoutOption[0]);
+            clearRange = (int)GUILayout.HorizontalSlider(clearRange, 2, 100, new GUILayoutOption[0]);
+            if (GUILayout.Button(rangeClear ? "关闭" : "开启", buttonStyle, new GUILayoutOption[0]))
+            {
+                rangeClear = !rangeClear;
+            }
+            GUILayout.EndVertical();
+        }
 
         // 增加Buff
-        public void addBuff(string name,int value)
+        void addBuff(string name, int value)
         {
-            ConditionID Cid = (ConditionID)Enum.Parse(typeof(ConditionID),name);
+            ConditionID Cid = (ConditionID)Enum.Parse(typeof(ConditionID), name);
             var Buff = EntityUtility.GetConditionValue(Cid, m.player.entity, m.player.world);
             LoggerInstance.Msg("[增加Buff(" + name + ")数值]当前Buff值: " + Buff + " 增加的数值: " + value);
             Buff += value;
@@ -696,36 +873,22 @@ namespace FlxsnxMod
         }
 
         // 减少Buff
-        public void delBuff(string name, int value)
+        void delBuff(string name, int value)
         {
-            /* 
-             * 有bug 改成移除buff了
-             * ConditionID Cid = (ConditionID)Enum.Parse(typeof(ConditionID), name);
-             var Buff = EntityUtility.GetConditionValue(Cid, m.player.entity, m.player.world);
-             LoggerInstance.Msg("[减少Buff("+name+")数值]当前Buff值: " + Buff+" 减少的数值: "+value);
-             Buff -= value;
-             if (Buff <= 0)
-             {
-                 m.player.playerCommandSystem.RemoveCondition(m.player.entity, Cid);
-             }
-             else
-             {
-                 m.player.playerCommandSystem.AddOrRefreshCondition(m.player.entity, Cid, Buff, 0);
-             }*/
             LoggerInstance.Msg("[移除Buff(" + name + ")]");
             ConditionID Cid = (ConditionID)Enum.Parse(typeof(ConditionID), name);
             m.player.playerCommandSystem.RemoveCondition(m.player.entity, Cid);
         }
 
-        public void addSkill(SkillID ID,int value)
+        void addSkill(SkillID ID, int value)
         {
             Skills skills = m._saveManager.GetSkills();
             int skv = m._saveManager.GetSkillValue(ID);
             int level = SkillData.GetLevelFromSkill(ID, skv);
-            m.player.SetSkillLevel(ID, level+value);
+            m.player.SetSkillLevel(ID, level + value);
         }
 
-        public void superThunderBeam()
+        void superThunderBeam()
         {
             m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.1f), m.player.entity);
             m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.2f), m.player.entity);
@@ -810,7 +973,107 @@ namespace FlxsnxMod
 
         }
 
-        public static bool IsNumeric(string value)
+        static void rangeClearTile(int range, Unity.Mathematics.int2 position, bool clearGround = false)
+        {
+            var m = GameObject.FindObjectOfType<Manager>();
+            if (range <= 0 || !isAdminPlayer()) return;
+            var playerEntity = m.player.entity;
+            var pos = new Unity.Mathematics.int2(0, 0);
+
+            // 向左右的时候
+            if (position.y == 0)
+            {
+                for (int y = 0; y < range; y++)
+                {
+                    pos.x = position.x < 0 ? position.x - y : position.x + y;
+
+                    for (int x = 0; x < range; x++)
+                    {
+                        pos.y = position.y + x;
+                        if (pos.x == 0 || pos.y == 0)
+                        {
+                            m.player.playerCommandSystem.CreateTileDamage(pos, 1000000000, playerEntity, false, true);
+                        }
+                        else
+                        {
+                            m.player.playerCommandSystem.CreateTileDamage(pos, 1000000000, playerEntity, clearGround, true);
+                        }
+
+                    }
+
+                    for (int x = 0; x < range; x++)
+                    {
+                        pos.y = position.y - x;
+                        if (pos.x == 0 || pos.y == 0)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            m.player.playerCommandSystem.CreateTileDamage(pos, 1000000000, playerEntity, clearGround, true);
+                        }
+
+                    }
+                }
+            }
+            // 向上下的时候
+            else
+            {
+                for (int y = 0; y < range; y++)
+                {
+                    pos.y = position.y < 0 ? position.y - y : position.y + y;
+
+                    for (int x = 0; x < range; x++)
+                    {
+                        pos.x = position.x + x;
+                        if (pos.x == 0 || pos.y == 0)
+                        {
+                            m.player.playerCommandSystem.CreateTileDamage(pos, 1000000000, playerEntity, false, true);
+                        }
+                        else
+                        {
+                            m.player.playerCommandSystem.CreateTileDamage(pos, 1000000000, playerEntity, clearGround, true);
+                        }
+
+                    }
+
+                    for (int x = 0; x < range; x++)
+                    {
+                        pos.x = position.x - x;
+                        if (pos.x == 0 || pos.y == 0)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            m.player.playerCommandSystem.CreateTileDamage(pos, 1000000000, playerEntity, clearGround, true);
+                        }
+
+                    }
+                }
+            }
+
+
+        }
+
+        static bool isAdminPlayer()
+        {
+            var m = GameObject.FindObjectOfType<Manager>();
+
+            var AdminList = m._networkingManager.adminList;
+
+            foreach(PlayerAdminEntry admin in AdminList.adminList)
+            {
+                if(admin.steamId == steamId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static bool IsNumeric(string value)
         {
             return Regex.IsMatch(value, @"^[+-]?\d*[.]?\d*$");
         }
@@ -830,11 +1093,57 @@ namespace FlxsnxMod
                 {
                     return true;
                 }
-                
+
             }
             else
             {
                 return true;
+            }
+        }
+
+        // 修复鼠标闪烁问题
+        [HarmonyPrefix, HarmonyPatch(typeof(Cursor), "set_visible")]
+        public static bool PlantMod_Cursor_set_visible_Patch(bool value)
+        {
+            if (value == false && showMenu == true)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPrefix, HarmonyPatch(typeof(PlayerCommand.ClientSystem), "CreateTileDamage")]
+        public static bool PlantMod_ClientSystem_CreateTileDamage_Patch(Unity.Mathematics.int2 position, ref int damage, ref Unity.Entities.Entity pullAnyLootTowardsPlayerEntity, ref bool pullAnyLootToPlayer, bool canDamageGround = false)
+        {
+            if (rangeClear && damage != 1000000000)
+            {
+                rangeClearTile((int)clearRange, position, canDamageGround);
+                return false;
+            }
+            else
+            {
+                if (oneTapClearTile)
+                {
+                    damage = 19999;
+                }
+
+                if (pullLootToPlayer)
+                {
+                    var m = GameObject.FindObjectOfType<Manager>();
+                    pullAnyLootTowardsPlayerEntity = m.player.entity;
+                    pullAnyLootToPlayer = true;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyPostfix, HarmonyPatch(typeof(SteamNetworking), "Initialize")]
+        public static void PlantMod_SteamPlatform_Init(SteamNetworking __instance)
+        {
+            if (steamId == 0)
+            {
+                steamId = SteamClient.SteamId.Value;
+                MelonLogger.Msg("SteamId:" + steamId);
             }
         }
     }
