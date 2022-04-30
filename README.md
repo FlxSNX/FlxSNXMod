@@ -23,13 +23,13 @@
     - 不知道为何使用了 `GUILayout.TextField` 或 `GUI.TextField` 后就会报错  
 
 3. 为什么不使用BepInEx  
-    - 不懂用 BepInEx6 如何绘制 UI 所以选用了 MelonLoader
+    - 不懂用 BepInEx6 如何使用 GUI 所以选用了 MelonLoader
 
 ## 如何使用
 1. 安装 [MelonLoader](https://github.com/LavaGang/MelonLoader) 到 `地心护核者` 的安装目录
 2. 从 Steam 启动游戏
 3. 使用 Visual Studio 打开项目
-4. 从游戏目录下的 `MelonLoader\Managed` 里引入对应的程序集
+4. 从游戏目录下的 `MelonLoader\Managed` 里引入对应程序集
 5. 生成 FlxSNXMod
 
 ## 如何使用Mod
