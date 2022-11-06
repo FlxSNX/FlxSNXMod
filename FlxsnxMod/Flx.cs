@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using Il2CppSystem.Text.RegularExpressions;
 using MelonLoader;
 using UnityEngine;
@@ -19,7 +20,7 @@ namespace FlxsnxMod
         ChatWindow chat;
         string itemID = "1";
         float amount = 1;
-        public const string version = "1.2.1";
+        public const string version = "1.3.2";
         Vector2 vSbarValue;
         bool ThunderBeam = false;
         AssetBundle Flxasset;
@@ -41,7 +42,7 @@ namespace FlxsnxMod
         bool showOther2 = false;
         bool showNewRangeClear = false;
 
-        static ulong steamId = 0;
+        //static ulong steamId = 0;
 
         public override void OnApplicationStart()
         {
@@ -148,7 +149,7 @@ namespace FlxsnxMod
 
                     if (isAdminPlayer())
                     {
-                        m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), m.player.aimDirection, m.player.entity);
+                        m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), m.player.aimDirection, m.player.entity,114514);
                     }
 
                 }
@@ -194,10 +195,6 @@ namespace FlxsnxMod
                                 {
                                     m.player.playerCommandSystem.CreateAndDropEntity((ObjectID)Enum.Parse(typeof(ObjectID), code[1]), m.player.RenderPosition + new Vector3(0, 2f, 0), (int)Int32.Parse(code[2]));
                                 }
-                            }
-                            else
-                            {
-                                m._textManager.SpawnCoolText("非AdminPlayer无法使用", new Vector3(0, 2, 0), Color.red, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
                             }
                         }
 
@@ -273,7 +270,7 @@ namespace FlxsnxMod
 
             if (showMenu == false)
             {
-                if (GUILayout.Button("FlxSNXMod", buttonStyle, new GUILayoutOption[] { GUILayout.Height(30) }))
+                if (GUILayout.Button("FlxsnxMod", buttonStyle, new GUILayoutOption[] { GUILayout.Height(30) }))
                 {
                     showMenu = true;
                     Cursor.lockState = CursorLockMode.None;
@@ -296,7 +293,7 @@ namespace FlxsnxMod
                 m = GameObject.FindObjectOfType<Manager>();
             }
 
-            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+            GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0,0,0,6)},new GUILayoutOption[0]);
 
             GUILayout.Button("", ModIcon, new GUILayoutOption[0]);
             GUILayout.Label("FlxsnxMod V" + version, new GUIStyle()
@@ -323,18 +320,24 @@ namespace FlxsnxMod
             GUI.backgroundColor = ModColor;
 
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
-            bool link = GUILayout.Button("作者B站主页", buttonStyle, new GUILayoutOption[0]);
+            bool link = GUILayout.Button("GitHub", buttonStyle, new GUILayoutOption[0]);
             if (link)
             {
-                m._platformManager.OpenLink("https://space.bilibili.com/36224682");
+               System.Diagnostics.Process.Start("https://github.com/FlxSNX/FlxSNXMod");
             }
-            bool idtable = GUILayout.Button("物品ID表格", buttonStyle, new GUILayoutOption[0]);
-            if (idtable)
+            bool dumpid = GUILayout.Button("导出物品ID", buttonStyle, new GUILayoutOption[0]);
+            if (dumpid)
             {
-                m._platformManager.OpenLink("https://docs.qq.com/sheet/DRUdjeW53QUN5T3B1");
+                StreamWriter dumpItmeID = File.CreateText(Application.dataPath + "/../itemID.txt");
+                foreach (ObjectID item in Enum.GetValues(typeof(ObjectID)))
+                {
+                    dumpItmeID.WriteLine(PugText.ProcessText($"Items/{item}", new UnhollowerBaseLib.Il2CppStringArray(new string[] { }), true, false) + "  " + item + "  " + item.GetHashCode());
+                }
+                dumpItmeID.Close();
+                dumpItmeID.Dispose();
+                LoggerInstance.Msg("itemID.txt导出完成,请在游戏目录下查看");
             }
             GUILayout.EndHorizontal();
-            GUILayout.Label("由于有人使用Mod恶意炸房,部分功能仅限AdminPlayer使用", new GUILayoutOption[0]);
 
             GUILayout.Label("游戏加速:" + (int)UnityEngine.Time.timeScale + "X", new GUILayoutOption[0]);
             UnityEngine.Time.timeScale = GUILayout.HorizontalSlider((int)UnityEngine.Time.timeScale, 1, 50, new GUILayoutOption[0]);
@@ -343,7 +346,7 @@ namespace FlxsnxMod
             if (GUILayout.Button("一键清空背包", buttonStyle, new GUILayoutOption[0]))
             {
                 var ih = m.player.playerInventoryHandler;
-                for (int i = 10; i < 45; i++)
+                for (int i = 10; i < 50; i++)
                 {
                     var info = ih.GetObjectData(i);
                     ih.DestroyObject(i, info.objectID);
@@ -352,7 +355,7 @@ namespace FlxsnxMod
             if (GUILayout.Button("背包物品999", buttonStyle, new GUILayoutOption[0]))
             {
                 var ih = m.player.playerInventoryHandler;
-                for (int i = 10; i < 45; i++)
+                for (int i = 10; i < 50; i++)
                 {
                     var info = ih.GetObjectData(i);
                     if (info.objectID != ObjectID.None)
@@ -372,11 +375,16 @@ namespace FlxsnxMod
                 addBuff("ToolDurabilityLastsLonger", 100);
                 addBuff("EquipmentDurabilityLastsLonger", 100);
             }
+            if (GUILayout.Button("还原耐久", buttonStyle, new GUILayoutOption[0]))
+            {
+                delBuff("ToolDurabilityLastsLonger", 0);
+                delBuff("EquipmentDurabilityLastsLonger", 0);
+            }
             GUILayout.EndHorizontal();
 
             /* 添加物品功能区 */
             GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0, 0, 0, 8) }, new GUILayoutOption[0]);
-            GUILayout.Label("添加物品 [该功能仅限AdminPlayer使用]", new GUILayoutOption[0]);
+            GUILayout.Label("添加物品 [该功能仅限管理员玩家使用]", new GUILayoutOption[0]);
             if (GUILayout.Button(showAddItem ? "x" : "+", OpenButton, new GUILayoutOption[] { GUILayout.Width(20), GUILayout.Height(20) }))
             {
                 showAddItem = !showAddItem;
@@ -426,9 +434,9 @@ namespace FlxsnxMod
                 other();
             }
 
-            /* 其他功能区 */
+            /* Buff功能区 */
             GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0, 0, 0, 8) }, new GUILayoutOption[0]);
-            GUILayout.Label("其他功能", new GUILayoutOption[0]);
+            GUILayout.Label("Buff功能", new GUILayoutOption[0]);
             if (GUILayout.Button(showOther ? "x" : "+", OpenButton, new GUILayoutOption[] { GUILayout.Width(20), GUILayout.Height(20) }))
             {
                 showOther = !showOther;
@@ -708,6 +716,51 @@ namespace FlxsnxMod
                 delBuff("AuraApplyBurning", 0);
             }
             GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+            GUILayout.Label("拾取范围", new GUILayoutOption[0]);
+            if (GUILayout.Button("+", buttonStyle, new GUILayoutOption[0]))
+            {
+                addBuff("IncreasedPickUpRadius", 100);
+            }
+            if (GUILayout.Button("移除", buttonStyle, new GUILayoutOption[0]))
+            {
+                delBuff("IncreasedPickUpRadius", 0);
+
+            }
+            GUILayout.Label("行船速度", new GUILayoutOption[0]);
+            if (GUILayout.Button("+", buttonStyle, new GUILayoutOption[0]))
+            {
+                addBuff("IncreasedBoatSpeed", 100);
+            }
+            if (GUILayout.Button("移除", buttonStyle, new GUILayoutOption[0]))
+            {
+                delBuff("IncreasedBoatSpeed", 0);
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+            GUILayout.Label("远程龙卷风", new GUILayoutOption[0]);
+            if (GUILayout.Button("+", buttonStyle, new GUILayoutOption[0]))
+            {
+                addBuff("ChanceOnRangeHitToSpawnOctopusBossProjectile", 100);
+            }
+            if (GUILayout.Button("移除", buttonStyle, new GUILayoutOption[0]))
+            {
+                delBuff("ChanceOnRangeHitToSpawnOctopusBossProjectile", 0);
+
+            }
+            GUILayout.Label("召唤鬼魂", new GUILayoutOption[0]);
+            if (GUILayout.Button("+", buttonStyle, new GUILayoutOption[0]))
+            {
+                addBuff("ChanceOnKillToSummonGhost", 100);
+            }
+            if (GUILayout.Button("移除", buttonStyle, new GUILayoutOption[0]))
+            {
+                delBuff("ChanceOnKillToSummonGhost", 0);
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.EndVertical();
         }
 
@@ -765,7 +818,7 @@ namespace FlxsnxMod
         void other()
         {
             GUILayout.BeginVertical(new GUIStyle() { margin = new RectOffset(8, 8, 0, 0) }, new GUILayoutOption[0]);
-            GUILayout.Label("雷霆光束 [该功能仅限AdminPlayer使用]", new GUILayoutOption[0]);
+            GUILayout.Label("雷霆光束 [该功能仅限管理员玩家使用]", new GUILayoutOption[0]);
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
             if (GUILayout.Button("开启", buttonStyle, new GUILayoutOption[0]))
             {
@@ -805,7 +858,7 @@ namespace FlxsnxMod
                 }
             }
             GUILayout.EndHorizontal();
-            
+
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
             GUILayout.Label("秒挖地皮" + (oneTapClearTile ? "[已开启]" : "[已关闭]"), new GUILayoutOption[0]);
             if (GUILayout.Button(oneTapClearTile ? "关闭" : "开启", buttonStyle, new GUILayoutOption[0]))
@@ -853,7 +906,7 @@ namespace FlxsnxMod
         void rangebox()
         {
             GUILayout.BeginVertical(new GUIStyle() { margin = new RectOffset(8, 8, 0, 0) }, new GUILayoutOption[0]);
-            GUILayout.Label("范围:" + clearRange + " [该功能仅限AdminPlayer使用]", new GUILayoutOption[0]);
+            GUILayout.Label("范围:" + clearRange + " [该功能仅限管理员玩家使用]", new GUILayoutOption[0]);
             clearRange = (int)GUILayout.HorizontalSlider(clearRange, 2, 100, new GUILayoutOption[0]);
             if (GUILayout.Button(rangeClear ? "关闭" : "开启", buttonStyle, new GUILayoutOption[0]))
             {
@@ -890,86 +943,86 @@ namespace FlxsnxMod
 
         void superThunderBeam()
         {
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.2f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.3f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, -0.1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, -0.2f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, -0.3f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.9f, 0, 0.5f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.8f, 0, 0.6f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.7f, 0, 0.7f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.6f, 0, 0.8f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.5f, 0, 0.9f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.4f, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.4f, 0, -1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.5f, 0, -0.9f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.6f, 0, -0.8f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.7f, 0, -0.7f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.8f, 0, -0.6f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.9f, 0, -0.5f), m.player.entity);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.1f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.2f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.3f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, -0.1f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, -0.2f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, -0.3f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.9f, 0, 0.5f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.8f, 0, 0.6f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.7f, 0, 0.7f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.6f, 0, 0.8f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.5f, 0, 0.9f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.4f, 0, 1f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.4f, 0, -1f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.5f, 0, -0.9f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.6f, 0, -0.8f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.7f, 0, -0.7f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.8f, 0, -0.6f), m.player.entity,114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.9f, 0, -0.5f), m.player.entity,114514);
 
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, 0.1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, 0.2f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, 0.3f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, -0.1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, -0.2f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, -0.3f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.9f, 0, 0.5f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.8f, 0, 0.6f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.7f, 0, 0.7f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.6f, 0, 0.8f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.5f, 0, 0.9f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.4f, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.4f, 0, -1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.5f, 0, -0.9f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.6f, 0, -0.8f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.7f, 0, -0.7f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.8f, 0, -0.6f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.9f, 0, -0.5f), m.player.entity);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, 0.1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, 0.2f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, 0.3f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, -0.1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, -0.2f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, -0.3f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.9f, 0, 0.5f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.8f, 0, 0.6f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.7f, 0, 0.7f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.6f, 0, 0.8f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.5f, 0, 0.9f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.4f, 0, 1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.4f, 0, -1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.5f, 0, -0.9f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.6f, 0, -0.8f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.7f, 0, -0.7f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.8f, 0, -0.6f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.9f, 0, -0.5f), m.player.entity, 114514);
 
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.1f, 0, -1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.2f, 0, -1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.3f, 0, -1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.1f, 0, -1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.2f, 0, -1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.3f, 0, -1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.5f, 0, -0.9f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.6f, 0, -0.8f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.7f, 0, -0.7f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.8f, 0, -0.6f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.9f, 0, -0.5f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, -0.4f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, -0.4f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.9f, 0, -0.5f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.8f, 0, -0.6f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.7f, 0, -0.7f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.6f, 0, -0.8f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.5f, 0, -0.9f), m.player.entity);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.1f, 0, -1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.2f, 0, -1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.3f, 0, -1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.1f, 0, -1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.2f, 0, -1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.3f, 0, -1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.5f, 0, -0.9f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.6f, 0, -0.8f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.7f, 0, -0.7f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.8f, 0, -0.6f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.9f, 0, -0.5f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, -0.4f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, -0.4f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.9f, 0, -0.5f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.8f, 0, -0.6f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.7f, 0, -0.7f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.6f, 0, -0.8f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.5f, 0, -0.9f), m.player.entity, 114514);
 
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.1f, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.2f, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.3f, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.1f, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.2f, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.3f, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.5f, 0, 0.9f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.6f, 0, 0.8f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.7f, 0, 0.7f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.8f, 0, 0.6f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.9f, 0, 0.5f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.4f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, 0.4f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.9f, 0, 0.5f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.8f, 0, 0.6f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.7f, 0, 0.7f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.6f, 0, 0.8f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.5f, 0, 0.9f), m.player.entity);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.1f, 0, 1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.2f, 0, 1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.3f, 0, 1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.1f, 0, 1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.2f, 0, 1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.3f, 0, 1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.5f, 0, 0.9f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.6f, 0, 0.8f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.7f, 0, 0.7f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.8f, 0, 0.6f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0.9f, 0, 0.5f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0.4f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1f, 0, 0.4f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.9f, 0, 0.5f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.8f, 0, 0.6f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.7f, 0, 0.7f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.6f, 0, 0.8f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-0.5f, 0, 0.9f), m.player.entity, 114514);
 
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1, 0, 0), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0, 0, 1f), m.player.entity);
-            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0, 0, -1f), m.player.entity);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(-1, 0, 0), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(1f, 0, 0), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0, 0, 1f), m.player.entity, 114514);
+            m.player.playerCommandSystem.SpawnThunderBeam(new Vector3(0, 0, 0), new Vector3(0, 0, -1f), m.player.entity, 114514);
 
         }
 
@@ -990,6 +1043,7 @@ namespace FlxsnxMod
                     for (int x = 0; x < range; x++)
                     {
                         pos.y = position.y + x;
+                        // MelonLogger.Msg(pos.x);
                         if (pos.x == 0 || pos.y == 0)
                         {
                             m.player.playerCommandSystem.CreateTileDamage(pos, 1000000000, playerEntity, false, true);
@@ -1004,6 +1058,7 @@ namespace FlxsnxMod
                     for (int x = 0; x < range; x++)
                     {
                         pos.y = position.y - x;
+                        // MelonLogger.Msg(pos.x);
                         if (pos.x == 0 || pos.y == 0)
                         {
                             continue;
@@ -1026,6 +1081,7 @@ namespace FlxsnxMod
                     for (int x = 0; x < range; x++)
                     {
                         pos.x = position.x + x;
+                        // MelonLogger.Msg(pos.x);
                         if (pos.x == 0 || pos.y == 0)
                         {
                             m.player.playerCommandSystem.CreateTileDamage(pos, 1000000000, playerEntity, false, true);
@@ -1040,6 +1096,7 @@ namespace FlxsnxMod
                     for (int x = 0; x < range; x++)
                     {
                         pos.x = position.x - x;
+                        // MelonLogger.Msg(pos.x);
                         if (pos.x == 0 || pos.y == 0)
                         {
                             continue;
@@ -1059,18 +1116,13 @@ namespace FlxsnxMod
         static bool isAdminPlayer()
         {
             var m = GameObject.FindObjectOfType<Manager>();
-
-            var AdminList = m._networkingManager.adminList;
-
-            foreach(PlayerAdminEntry admin in AdminList.adminList)
+            if(m.player.adminPrivileges <= 0)
             {
-                if(admin.steamId == steamId)
-                {
-                    return true;
-                }
+                m._textManager.SpawnCoolText("非管理员玩家无法使用", new Vector3(0, 2, 0), Color.red, TextManager.FontFace.button, 1f, 1, 5, 0.8f, 0.8f);
+                return false;
             }
 
-            return false;
+            return true;
         }
 
         static bool IsNumeric(string value)
@@ -1079,7 +1131,7 @@ namespace FlxsnxMod
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(MapUI), "Ping")]
-        public static bool PlantMod_MapUI_MapPing_Patch(PlayerController pc, Vector3 worldPos)
+        public static bool FlxsnxMod_MapUI_MapPing_Patch(PlayerController pc, Vector3 worldPos)
         {
             if (MapPing)
             {
@@ -1103,7 +1155,7 @@ namespace FlxsnxMod
 
         // 修复鼠标闪烁问题
         [HarmonyPrefix, HarmonyPatch(typeof(Cursor), "set_visible")]
-        public static bool PlantMod_Cursor_set_visible_Patch(bool value)
+        public static bool FlxsnxMod_Cursor_set_visible_Patch(bool value)
         {
             if (value == false && showMenu == true)
             {
@@ -1113,7 +1165,7 @@ namespace FlxsnxMod
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(PlayerCommand.ClientSystem), "CreateTileDamage")]
-        public static bool PlantMod_ClientSystem_CreateTileDamage_Patch(Unity.Mathematics.int2 position, ref int damage, ref Unity.Entities.Entity pullAnyLootTowardsPlayerEntity, ref bool pullAnyLootToPlayer, bool canDamageGround = false)
+        public static bool FlxsnxMod_ClientSystem_CreateTileDamage_Patch(Unity.Mathematics.int2 position, ref int damage, ref Unity.Entities.Entity pullAnyLootTowardsPlayerEntity, ref bool pullAnyLootToPlayer, bool canDamageGround = false)
         {
             if (rangeClear && damage != 1000000000)
             {
@@ -1134,16 +1186,6 @@ namespace FlxsnxMod
                     pullAnyLootToPlayer = true;
                 }
                 return true;
-            }
-        }
-
-        [HarmonyPostfix, HarmonyPatch(typeof(SteamNetworking), "Initialize")]
-        public static void PlantMod_SteamPlatform_Init(SteamNetworking __instance)
-        {
-            if (steamId == 0)
-            {
-                steamId = SteamClient.SteamId.Value;
-                MelonLogger.Msg("SteamId:" + steamId);
             }
         }
     }
