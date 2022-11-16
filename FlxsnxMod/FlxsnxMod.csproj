@@ -65,8 +65,8 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="PresentationCore" />
-    <Reference Include="Pug.Core">
-      <HintPath>E:\Steam\steamapps\common\Core Keeper\MelonLoader\Managed\Pug.Core.dll</HintPath>
+    <Reference Include="Pug.Base">
+      <HintPath>E:\Steam\steamapps\common\Core Keeper\MelonLoader\Managed\Pug.Base.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Pug.Other">

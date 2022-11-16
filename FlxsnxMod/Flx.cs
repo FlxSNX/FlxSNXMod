@@ -20,7 +20,7 @@ namespace FlxsnxMod
         ChatWindow chat;
         string itemID = "1";
         float amount = 1;
-        public const string version = "1.3.2";
+        public const string version = "1.4.0";
         Vector2 vSbarValue;
         bool ThunderBeam = false;
         AssetBundle Flxasset;
@@ -42,8 +42,7 @@ namespace FlxsnxMod
         bool showOther2 = false;
         bool showNewRangeClear = false;
 
-        //static ulong steamId = 0;
-
+        [Obsolete]
         public override void OnApplicationStart()
         {
             Flxasset = AssetBundle.LoadFromMemory(FlxsnxMod.Properties.Res.mod);
@@ -329,6 +328,7 @@ namespace FlxsnxMod
             if (dumpid)
             {
                 StreamWriter dumpItmeID = File.CreateText(Application.dataPath + "/../itemID.txt");
+                dumpItmeID.WriteLine("DumpObjectIDTool By FlxSNXMod");
                 foreach (ObjectID item in Enum.GetValues(typeof(ObjectID)))
                 {
                     dumpItmeID.WriteLine(PugText.ProcessText($"Items/{item}", new UnhollowerBaseLib.Il2CppStringArray(new string[] { }), true, false) + "  " + item + "  " + item.GetHashCode());
@@ -336,6 +336,19 @@ namespace FlxsnxMod
                 dumpItmeID.Close();
                 dumpItmeID.Dispose();
                 LoggerInstance.Msg("itemID.txt导出完成,请在游戏目录下查看");
+            }
+            bool dumpbuffid = GUILayout.Button("导出buffID", buttonStyle, new GUILayoutOption[0]);
+            if (dumpbuffid)
+            {
+                StreamWriter dumpItmeID = File.CreateText(Application.dataPath + "/../buffID.txt.txt");
+                dumpItmeID.WriteLine("DumpConditionIDTool By FlxSNXMod");
+                foreach (ConditionID buff in Enum.GetValues(typeof(ConditionID)))
+                {
+                    dumpItmeID.WriteLine(PugText.ProcessText($"Conditions/{buff}", new UnhollowerBaseLib.Il2CppStringArray(new string[] { }), true, false) + "  " + buff + "  " + buff.GetHashCode());
+                }
+                dumpItmeID.Close();
+                dumpItmeID.Dispose();
+                LoggerInstance.Msg("buffID.txt导出完成,请在游戏目录下查看");
             }
             GUILayout.EndHorizontal();
 
@@ -859,6 +872,24 @@ namespace FlxsnxMod
             }
             GUILayout.EndHorizontal();
 
+            /*GUILayout.Label("秒挖地皮 开启后需要重新进存档", new GUILayoutOption[0]);
+            if (GUILayout.Button("秒挖地皮", buttonStyle, new GUILayoutOption[0]))
+            {
+                String[] set = { "GroundDirtBlockEntity", "GroundStoneBlockEntity", "GroundHiveBlockEntity", "GroundGrassBlockEntity", "GroundMoldBlockEntity", "GroundBeachSandBlockEntity", "GroundClayBlockEntity", "GroundSandBlockEntity", "GroundTurfBlockEntity" };
+
+                HealthCDAuthoring[] objs = Resources.FindObjectsOfTypeAll<HealthCDAuthoring>();
+
+                foreach (HealthCDAuthoring obj in objs)
+                {
+                    if (Array.IndexOf(set, obj.name) != -1)
+                    {
+                        obj.maxHealth = 0;
+                        if (Array.IndexOf(set, obj.name) == set.Length) break;
+                    }
+                }
+
+            }*/
+
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
             GUILayout.Label("秒挖地皮" + (oneTapClearTile ? "[已开启]" : "[已关闭]"), new GUILayoutOption[0]);
             if (GUILayout.Button(oneTapClearTile ? "关闭" : "开启", buttonStyle, new GUILayoutOption[0]))
@@ -881,7 +912,7 @@ namespace FlxsnxMod
                         obj.piercesWallTypes.Add(PugTilemap.Tileset.Mold);
                         obj.piercesWallTypes.Add(PugTilemap.Tileset.Nature);
                         obj.piercesWallTypes.Add(PugTilemap.Tileset.LarvaHive);
-                        obj.piercesWallTypes.Add(PugTilemap.Tileset.LavaWall);
+                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Lava);
                         obj.piercesWallTypes.Add(PugTilemap.Tileset.Stone);
                         obj.piercesWallTypes.Add(PugTilemap.Tileset.Clay);
                         obj.tileDamageRadius = 150;
@@ -1033,6 +1064,18 @@ namespace FlxsnxMod
             var playerEntity = m.player.entity;
             var pos = new Unity.Mathematics.int2(0, 0);
 
+            /*
+             判断方向
+             x = 1,y = 0时向右
+             x = -1,y = 0时向左
+             x =0,y = -1时向下
+             x =0,y = 1时向上
+             x = 1,y = 1 时右上
+             x = 1,y = -1 时右下
+             x = -1,y = 1 时左上
+             x = -1,y = -1 时左下
+             */
+
             // 向左右的时候
             if (position.y == 0)
             {
@@ -1115,6 +1158,19 @@ namespace FlxsnxMod
 
         static bool isAdminPlayer()
         {
+            /*
+             *  有问题adminlist始终只有自己的id
+             *
+            var m = GameObject.FindObjectOfType<Manager>();
+            var AdminList = m._networkingManager.adminList;
+            foreach(PlayerAdminEntry admin in AdminList.adminList)
+            {
+                if(admin.steamId == steamId)
+                {
+                    return true;
+                }
+            }
+            return false;*/
             var m = GameObject.FindObjectOfType<Manager>();
             if(m.player.adminPrivileges <= 0)
             {
@@ -1123,6 +1179,7 @@ namespace FlxsnxMod
             }
 
             return true;
+
         }
 
         static bool IsNumeric(string value)
@@ -1188,5 +1245,15 @@ namespace FlxsnxMod
                 return true;
             }
         }
+
+        /*[HarmonyPostfix, HarmonyPatch(typeof(SteamNetworking), "Initialize")]
+        public static void FlxsnxMod_SteamPlatform_Init(SteamNetworking __instance)
+        {
+            if (steamId == 0)
+            {
+                steamId = SteamClient.SteamId.Value;
+                MelonLogger.Msg("SteamId:" + steamId);
+            }
+        }*/
     }
 }
