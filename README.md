@@ -2,6 +2,8 @@
 基于 MelonLoader 的 CoreKeeper(地心护核者) 的作弊Mod  
 
 ![预览图](https://files.catbox.moe/c8brpg.jpg)
+## 更新日志
+[UpdateLog](https://github.com/FlxSNX/FlxSNXMod/blob/main/UpdateLog.md)
 
 ## 功能
 * 添加物品
