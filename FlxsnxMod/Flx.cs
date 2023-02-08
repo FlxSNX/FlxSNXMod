@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using Il2CppSystem.Text.RegularExpressions;
 using MelonLoader;
 using UnityEngine;
 using HarmonyLib;
-using Steamworks;
+using Il2Cpp;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 
 namespace FlxsnxMod
 {
@@ -20,14 +17,14 @@ namespace FlxsnxMod
         ChatWindow chat;
         string itemID = "1";
         float amount = 1;
-        public const string version = "1.4.0";
+        public const string version = "1.4.2";
         Vector2 vSbarValue;
         bool ThunderBeam = false;
         AssetBundle Flxasset;
         GUIStyle buttonStyle;
         Color32 ModColor = new Color32(165, 151, 115, 255);
         Rect WindowRect = new Rect(0, (Screen.height - 420) / 2 + 30, 330, 420);
-        GUIStyle ModIcon;
+        // GUIStyle ModIcon;
         GUIStyle CloseButton;
         GUIStyle OpenButton;
         static bool MapPing = false;
@@ -69,7 +66,7 @@ namespace FlxsnxMod
                 margin = new RectOffset(5, 5, 0, 5)
             };
 
-            ModIcon = new GUIStyle()
+            /*ModIcon = new GUIStyle()
             {
                 normal = new GUIStyleState
                 {
@@ -79,7 +76,7 @@ namespace FlxsnxMod
                 fixedHeight = 28,
                 fixedWidth = 28,
                 margin = new RectOffset(0, 0, 10, 10)
-            };
+            };*/
 
             CloseButton = new GUIStyle()
             {
@@ -294,7 +291,7 @@ namespace FlxsnxMod
 
             GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0,0,0,6)},new GUILayoutOption[0]);
 
-            GUILayout.Button("", ModIcon, new GUILayoutOption[0]);
+            // GUILayout.Button("", ModIcon, new GUILayoutOption[0]);
             GUILayout.Label("FlxsnxMod V" + version, new GUIStyle()
             {
                 normal = new GUIStyleState
@@ -331,7 +328,7 @@ namespace FlxsnxMod
                 dumpItmeID.WriteLine("DumpObjectIDTool By FlxSNXMod");
                 foreach (ObjectID item in Enum.GetValues(typeof(ObjectID)))
                 {
-                    dumpItmeID.WriteLine(PugText.ProcessText($"Items/{item}", new UnhollowerBaseLib.Il2CppStringArray(new string[] { }), true, false) + "  " + item + "  " + item.GetHashCode());
+                    dumpItmeID.WriteLine(PugText.ProcessText($"Items/{item}", new Il2CppStringArray(new string[] { }), true, false) + "  " + item + "  " + item.GetHashCode());
                 }
                 dumpItmeID.Close();
                 dumpItmeID.Dispose();
@@ -344,7 +341,7 @@ namespace FlxsnxMod
                 dumpItmeID.WriteLine("DumpConditionIDTool By FlxSNXMod");
                 foreach (ConditionID buff in Enum.GetValues(typeof(ConditionID)))
                 {
-                    dumpItmeID.WriteLine(PugText.ProcessText($"Conditions/{buff}", new UnhollowerBaseLib.Il2CppStringArray(new string[] { }), true, false) + "  " + buff + "  " + buff.GetHashCode());
+                    dumpItmeID.WriteLine(PugText.ProcessText($"Conditions/{buff}", new Il2CppStringArray(new string[] { }), true, false) + "  " + buff + "  " + buff.GetHashCode());
                 }
                 dumpItmeID.Close();
                 dumpItmeID.Dispose();
@@ -359,7 +356,7 @@ namespace FlxsnxMod
             if (GUILayout.Button("一键清空背包", buttonStyle, new GUILayoutOption[0]))
             {
                 var ih = m.player.playerInventoryHandler;
-                for (int i = 10; i < 50; i++)
+                for (int i = 10; i < ih.size; i++)
                 {
                     var info = ih.GetObjectData(i);
                     ih.DestroyObject(i, info.objectID);
@@ -368,7 +365,7 @@ namespace FlxsnxMod
             if (GUILayout.Button("背包物品999", buttonStyle, new GUILayoutOption[0]))
             {
                 var ih = m.player.playerInventoryHandler;
-                for (int i = 10; i < 50; i++)
+                for (int i = 10; i < ih.size; i++)
                 {
                     var info = ih.GetObjectData(i);
                     if (info.objectID != ObjectID.None)
@@ -898,30 +895,6 @@ namespace FlxsnxMod
             }
             GUILayout.EndHorizontal();
 
-            GUILayout.Label("大范围虫炮 开启后需要重新进存档", new GUILayoutOption[0]);
-            GUILayout.Label("与“范围拆墙+铲地”同时开启会造成卡顿", new GUILayoutOption[0]);
-
-            if (GUILayout.Button("大范围虫炮", buttonStyle, new GUILayoutOption[0]))
-            {
-                ProjectileCDAuthoring[] objs = Resources.FindObjectsOfTypeAll<ProjectileCDAuthoring>();
-
-                foreach (ProjectileCDAuthoring obj in objs)
-                {
-                    if (obj.name == "GrubzookaProjectileEntity")
-                    {
-                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Mold);
-                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Nature);
-                        obj.piercesWallTypes.Add(PugTilemap.Tileset.LarvaHive);
-                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Lava);
-                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Stone);
-                        obj.piercesWallTypes.Add(PugTilemap.Tileset.Clay);
-                        obj.tileDamageRadius = 150;
-                        break;
-                    }
-                }
-                rangeClear = false;
-            }
-
             GUILayout.BeginHorizontal(new GUILayoutOption[0]);
             GUILayout.Label("吸附掉落物" + (pullLootToPlayer ? "[已开启]" : "[已关闭]"), new GUILayoutOption[0]);
             if (GUILayout.Button(pullLootToPlayer ? "关闭" : "开启", buttonStyle, new GUILayoutOption[0]))
@@ -929,7 +902,6 @@ namespace FlxsnxMod
                 pullLootToPlayer = !pullLootToPlayer;
             }
             GUILayout.EndHorizontal();
-            GUILayout.Label("与“大范围虫炮”同时开启开炮时会小卡一下", new GUILayoutOption[0]);
 
             GUILayout.EndVertical();
         }
@@ -1221,7 +1193,7 @@ namespace FlxsnxMod
             return true;
         }
 
-        [HarmonyPrefix, HarmonyPatch(typeof(PlayerCommand.ClientSystem), "CreateTileDamage")]
+        [HarmonyPrefix, HarmonyPatch(typeof(Il2CppPlayerCommand.ClientSystem), "CreateTileDamage")]
         public static bool FlxsnxMod_ClientSystem_CreateTileDamage_Patch(Unity.Mathematics.int2 position, ref int damage, ref Unity.Entities.Entity pullAnyLootTowardsPlayerEntity, ref bool pullAnyLootToPlayer, bool canDamageGround = false)
         {
             if (rangeClear && damage != 1000000000)

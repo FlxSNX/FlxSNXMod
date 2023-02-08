@@ -1,5 +1,9 @@
 ## 更新日志(UpdateLog)
 
+#### 2023-02-09 v1.4.2
+1.修复游戏更新导致Mod失效
+2.此版本需要[MelonLoader 0.6.0](https://github.com/LavaGang/MelonLoader/releases/tag/v0.6.0)版本
+
 #### 2022-11-23 v1.4.1 
 1.修复清空背包与背包物999功能导致闪退的问题  
 2.因功能失效移除大范围虫炮功能
