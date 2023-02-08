@@ -24,15 +24,13 @@
 1. 这是我第一次尝试 C# 和 制作Mod
 2. 为什么物品ID不使用文本输入框  
     - 不知道为何使用了 `GUILayout.TextField` 或 `GUI.TextField` 后就会报错  
-
-3. 为什么不使用BepInEx  
-    - 不懂用 BepInEx6 如何使用 GUI 所以选用了 MelonLoader
+3. 不懂用 BepInEx6 如何使用 GUI 所以选用了 MelonLoader
 
 ## 如何使用
 1. 安装 [MelonLoader](https://github.com/LavaGang/MelonLoader) 到 `地心护核者` 的安装目录
 2. 从 Steam 启动游戏
 3. 使用 Visual Studio 打开项目
-4. 从游戏目录下的 `MelonLoader\Managed` 里引入对应的程序集
+4. 修改 `FlxsnxMod.csproj` 里引用的程序集路径
 5. 生成 FlxSNXMod
 
 ## 如何使用Mod
