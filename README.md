@@ -3,7 +3,7 @@
 
 ![预览图](https://files.catbox.moe/c8brpg.jpg)
 ## 更新日志
-[ChangeLog](https://github.com/FlxSNX/FlxSNXMod/blob/main/UpdateLog.md)
+[ChangeLog](https://github.com/FlxSNX/FlxSNXMod/blob/main/ChangeLog.md)
 
 ## 功能
 * 添加物品
