@@ -1,7 +1,7 @@
 ## 更新日志(UpdateLog)
 
 #### 2023-02-09 v1.4.2
-1.修复游戏更新导致Mod失效
+1.修复游戏更新导致Mod失效  
 2.此版本需要[MelonLoader 0.6.0](https://github.com/LavaGang/MelonLoader/releases/tag/v0.6.0)版本
 
 #### 2022-11-23 v1.4.1 
