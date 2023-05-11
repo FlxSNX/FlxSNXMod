@@ -17,7 +17,9 @@ namespace FlxsnxMod
         ChatWindow chat;
         string itemID = "1";
         float amount = 1;
-        public const string version = "1.4.2";
+        public const string version = "1.4.3";
+        // for any Release Candidate version
+        public const string rc = "rc1";
         Vector2 vSbarValue;
         bool ThunderBeam = false;
         AssetBundle Flxasset;
@@ -292,7 +294,7 @@ namespace FlxsnxMod
             GUILayout.BeginHorizontal(new GUIStyle() { margin = new RectOffset(0,0,0,6)},new GUILayoutOption[0]);
 
             // GUILayout.Button("", ModIcon, new GUILayoutOption[0]);
-            GUILayout.Label("FlxsnxMod V" + version, new GUIStyle()
+            GUILayout.Label("FlxsnxMod V" + inGameVersion(), new GUIStyle()
             {
                 normal = new GUIStyleState
                 {
@@ -380,6 +382,10 @@ namespace FlxsnxMod
             {
                 m.player.playerCommandSystem.ToggleCanConsumeHunger(m.player.entity, false);
             }
+            if (GUILayout.Button("会饿", buttonStyle, new GUILayoutOption[0]))
+            {
+                m.player.playerCommandSystem.ToggleCanConsumeHunger(m.player.entity, true);
+            }
             if (GUILayout.Button("不耗耐久", buttonStyle, new GUILayoutOption[0]))
             {
                 addBuff("ToolDurabilityLastsLonger", 100);
@@ -461,6 +467,13 @@ namespace FlxsnxMod
             GUI.DragWindow();
         }
 
+        // Generate correct ingameVersionNumber with rc
+        string inGameVersion()
+        {
+            string versionText = version;
+            if (rc != "") versionText += " - " + rc;
+            return versionText;
+        }
         // 技能修改类
         void skill()
         {
