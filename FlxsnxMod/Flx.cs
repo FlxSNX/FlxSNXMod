@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Il2CppSystem.Text.RegularExpressions;
 using MelonLoader;
@@ -379,6 +379,10 @@ namespace FlxsnxMod
             if (GUILayout.Button("不会饥饿", buttonStyle, new GUILayoutOption[0]))
             {
                 m.player.playerCommandSystem.ToggleCanConsumeHunger(m.player.entity, false);
+            }
+            if (GUILayout.Button("会饿", buttonStyle, new GUILayoutOption[0]))
+            {
+                m.player.playerCommandSystem.ToggleCanConsumeHunger(m.player.entity, true);
             }
             if (GUILayout.Button("不耗耐久", buttonStyle, new GUILayoutOption[0]))
             {
